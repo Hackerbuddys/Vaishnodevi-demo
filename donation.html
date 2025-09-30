@@ -4,96 +4,85 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Donate Now - Vaishnodevi Trust</title>
-  <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <style>
-    body {
-      background: #f8f9fa;
-    }
-    .donation-box {
-      max-width: 600px;
-      margin: 50px auto;
-      padding: 30px;
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    .btn-donate {
-      background: #A40E0D;
-      color: #fff;
-      border: none;
-      padding: 12px 20px;
-      font-size: 18px;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    .btn-donate:hover {
-      background: #F74507;
-    }
+    body { background: #f8f9fa; font-family: Arial, sans-serif; }
+    .donation-box { max-width: 600px; margin: 50px auto; padding: 30px; background: #fff; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .btn-donate { background: #A40E0D; color: #fff; border: none; padding: 12px 20px; font-size: 18px; border-radius: 8px; cursor: pointer; width: 100%; }
+    .btn-donate:hover { background: #F74507; }
+    .certificate { text-align: center; padding: 30px; border: 3px solid #A40E0D; border-radius: 12px; background: #fff; margin-top: 30px; display: none; }
+    .certificate h2 { color: #A40E0D; }
   </style>
 </head>
 <body>
 
   <div class="donation-box">
-    <h2 class="text-center">Make a Donation</h2>
-    <p class="text-center">Support our cause by donating securely in INR.</p>
-
+    <h2 class="text-center">Support Vaishnodevi Charitable Trust</h2>
     <form id="donationForm">
       <div class="mb-3">
-        <label for="name" class="form-label">Full Name</label>
-        <input type="text" id="name" class="form-control" placeholder="Enter your full name" required>
+        <label>Full Name</label>
+        <input type="text" id="name" class="form-control" required>
       </div>
       <div class="mb-3">
-        <label for="email" class="form-label">Email Address</label>
-        <input type="email" id="email" class="form-control" placeholder="Enter your email" required>
+        <label>Email</label>
+        <input type="email" id="email" class="form-control" required>
       </div>
       <div class="mb-3">
-        <label for="amount" class="form-label">Donation Amount (INR)</label>
-        <input type="number" id="amount" class="form-control" placeholder="Enter amount" required>
+        <label>Donation Amount (INR)</label>
+        <input type="number" id="amount" class="form-control" required>
       </div>
-
-      <button type="button" class="btn-donate w-100" id="payBtn">Donate Now</button>
+      <button type="button" class="btn-donate" id="donateBtn">Donate Now</button>
     </form>
+
+    <div class="certificate" id="certificate">
+      <h2>🎉 Thank You for Your Donation! 🎉</h2>
+      <p>Dear <span id="donorName"></span>,</p>
+      <p>We sincerely appreciate your generous contribution of ₹<span id="donorAmount"></span>.</p>
+    </div>
   </div>
 
-  <!-- Razorpay Script -->
- <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<script>
-  document.getElementById("payBtn").onclick = function (e) {
-    e.preventDefault();
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script>
+    document.getElementById("donateBtn").onclick = async function() {
+      let name = document.getElementById("name").value;
+      let email = document.getElementById("email").value;
+      let amount = document.getElementById("amount").value;
 
-    let name = document.getElementById("name").value;
-    let email = document.getElementById("email").value;
-    let amount = document.getElementById("amount").value * 100; // INR → Paise
-
-    if (!amount || amount <= 0) {
-      alert("Please enter a valid donation amount.");
-      return;
-    }
-
-    var options = {
-      "key": "rzp_test_abc123xyz", // 🔑 Replace with your Key ID
-      "amount": amount,
-      "currency": "INR",
-      "name": "Vaishnodevi Charitable Trust",
-      "description": "Donation Payment",
-      "handler": function (response) {
-        alert("✅ Payment Successful! Payment ID: " + response.razorpay_payment_id);
-        // You can send response.razorpay_payment_id to your backend for verification
-      },
-      "prefill": {
-        "name": name,
-        "email": email
-      },
-      "theme": {
-        "color": "#A40E0D"
+      if(!name || !email || !amount || amount <= 0){
+        alert("Please fill all fields correctly.");
+        return;
       }
-    };
 
-    var rzp1 = new Razorpay(options);
-    rzp1.open();
-  }
-</script>
+      // Step 1: Call backend to create order
+      const response = await fetch("http://localhost:5000/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: amount })
+      });
 
+      const order = await response.json();
+
+      // Step 2: Open Razorpay checkout
+      var options = {
+        "key": "rzp_live_RNYJje9mWkAgm7",
+        "amount": order.amount,
+        "currency": order.currency,
+        "name": "Vaishnodevi Charitable Trust",
+        "description": "Donation Payment",
+        "order_id": order.id,
+        "prefill": { "name": name, "email": email },
+        "theme": { "color": "#A40E0D" },
+        "handler": function (response) {
+          // Payment success → show certificate
+          document.getElementById("donorName").innerText = name;
+          document.getElementById("donorAmount").innerText = amount;
+          document.getElementById("certificate").style.display = "block";
+        }
+      };
+
+      var rzp1 = new Razorpay(options);
+      rzp1.open();
+    }
+  </script>
 </body>
 </html>
- 
